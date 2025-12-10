@@ -21,7 +21,7 @@ int main() {
     // FP32 => 4 bytes
     constexpr uint32_t tile_size_bytes = 4 * elements_per_tile;
 
-    std::vector<float> in0_vector(elements_per_tile, 4.2f);
+    std::vector<float> in0_vector(elements_per_tile, 0.3f);
     std::vector<float> result_vec(elements_per_tile, 5.0f);
 
     printf("\nAllocated initial vector:\n");
