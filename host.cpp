@@ -21,10 +21,11 @@ int main() {
     // FP32 => 4 bytes
     constexpr uint32_t tile_size_bytes = 4 * elements_per_tile;
 
+    std::vector<float> in0_vector(elements_per_tile, 4.2f);
     std::vector<float> result_vec(elements_per_tile, 5.0f);
 
     printf("\nAllocated initial vector:\n");
-    print_first_tile(result_vec, 32 * 32);
+    print_first_tile(result_vec, elements_per_tile);
 
     constexpr uint32_t buffer_size = tile_size_bytes * n_tiles;
 
@@ -35,18 +36,39 @@ int main() {
         .buffer_type = BufferType::DRAM
     };
 
-    // Allocate a device DRAM buffer for the result
-    std::shared_ptr<Buffer> dst_dram_buffer = CreateBuffer(dram_config);
+    // Allocate an input DRAM buffer and CB
+    std::shared_ptr<Buffer> in0_dram_buffer = CreateBuffer(dram_config);
+    constexpr uint32_t cb_in0 = CBIndex::c_0;
 
-    // Allocate a circular buffer for holding the output tile
+    CircularBufferConfig cb_in0_config = CircularBufferConfig(
+        buffer_size, {{cb_in0, DataFormat::Float32}}
+    ).set_page_size(cb_in0, buffer_size);
+
+    CreateCircularBuffer(program, core, cb_in0_config);
+
+    // Do the same for the result data 
+    std::shared_ptr<Buffer> dst_dram_buffer = CreateBuffer(dram_config);
     constexpr uint32_t cb_out = CBIndex::c_16;
-    constexpr uint32_t num_output_tiles = 1;
 
     CircularBufferConfig cb_out_config = CircularBufferConfig(
         buffer_size, {{cb_out, DataFormat::Float32}}
     ).set_page_size(cb_out, buffer_size);
 
     CreateCircularBuffer(program, core, cb_out_config);
+
+    // Move data from host to device DRAM, blocking
+    EnqueueWriteBuffer(cq, in0_dram_buffer, in0_vector, true);
+
+    KernelHandle reader = CreateKernel(
+        program,
+        "reader.cpp",
+        core,
+        DataMovementConfig {
+            .processor = DataMovementProcessor::RISCV_1,
+            .noc = NOC::RISCV_0_default,
+            .compile_args = {}
+        }
+    );
 
     KernelHandle compute = CreateKernel(
         program,
@@ -74,6 +96,7 @@ int main() {
 
     // completely contained within the first dram bank as no interleaving
     // done, because we set .size == .page_size in the buffer config
+    SetRuntimeArgs(program, reader, core, {in0_dram_buffer->address(), n_tiles});
     SetRuntimeArgs(program, writer, core, {dst_dram_buffer->address(), n_tiles});
 
     EnqueueProgram(cq, program, false);
@@ -83,7 +106,7 @@ int main() {
 
     CloseDevice(device);
 
-    print_first_tile(result_vec, 32 * 32);
+    print_first_tile(result_vec, elements_per_tile);
 
     return 0;
 }
