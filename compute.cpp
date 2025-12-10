@@ -20,7 +20,7 @@ void MAIN {
 
     for (uint32_t i = 0; i < n_tiles; i++) {
         tile_regs_acquire();
-        fill_tile(idst, 7.3f);
+        fill_tile(idst, 1.0f);
 
         tile_regs_commit();
         tile_regs_wait();
