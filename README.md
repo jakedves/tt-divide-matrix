@@ -11,3 +11,5 @@ dst[2] = cb1 * dst[0] { matrix unit }   [ times reciprocal by b ]
 
 return dst[2] to host                   [ c = b / a ]
 ```
+
+![IMG_0832](https://github.com/user-attachments/assets/c166ddc9-8b64-4c22-95d7-cd868844747b)
