@@ -1,6 +1,6 @@
 # Metalium Implementation of Matrix Preferred Divison
 
-Toy example for learning Metalium. Performs the following:
+Toy example for learning Metalium (v0.62.2). Performs the following:
 
 ```py
 copy cb0, cb1 onto device
