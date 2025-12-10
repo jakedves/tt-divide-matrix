@@ -21,7 +21,9 @@ int main() {
     // FP32 => 4 bytes
     constexpr uint32_t tile_size_bytes = 4 * elements_per_tile;
 
+    // will compute 0.7 * 1.0 / 0.3 == 0.7 * 3.333 == 2.333
     std::vector<float> in0_vector(elements_per_tile, 0.3f);
+    std::vector<float> in1_vector(elements_per_tile, 0.7f);
     std::vector<float> result_vec(elements_per_tile, 5.0f);
 
     printf("\nAllocated initial vector:\n");
@@ -36,7 +38,7 @@ int main() {
         .buffer_type = BufferType::DRAM
     };
 
-    // Allocate an input DRAM buffer and CB
+    // Allocate an input DRAM buffers and CBs
     std::shared_ptr<Buffer> in0_dram_buffer = CreateBuffer(dram_config);
     constexpr uint32_t cb_in0 = CBIndex::c_0;
 
@@ -45,6 +47,22 @@ int main() {
     ).set_page_size(cb_in0, buffer_size);
 
     CreateCircularBuffer(program, core, cb_in0_config);
+
+    // second
+    std::shared_ptr<Buffer> in1_dram_buffer = CreateBuffer(dram_config);
+    constexpr uint32_t cb_in1 = CBIndex::c_1;
+
+    CircularBufferConfig cb_in1_config = CircularBufferConfig(
+        buffer_size, {{cb_in1, DataFormat::Float32}}
+    ).set_page_size(cb_in1, buffer_size);
+
+    CreateCircularBuffer(program, core, cb_in1_config);
+
+    // intermediate CB
+    constexpr uint32_t cb_intermediate = CBIndex::c_2;
+    CircularBufferConfig cb_intermediate_config = CircularBufferConfig(
+        buffer_size, {{cb_intermediate, DataFormat::Float32}}
+    ).set_page_size(cb_intermediate, buffer_size);
 
     // Do the same for the result data 
     std::shared_ptr<Buffer> dst_dram_buffer = CreateBuffer(dram_config);
@@ -58,6 +76,7 @@ int main() {
 
     // Move data from host to device DRAM, blocking
     EnqueueWriteBuffer(cq, in0_dram_buffer, in0_vector, true);
+    EnqueueWriteBuffer(cq, in1_dram_buffer, in1_vector, true);
 
     KernelHandle reader = CreateKernel(
         program,
@@ -96,7 +115,7 @@ int main() {
 
     // completely contained within the first dram bank as no interleaving
     // done, because we set .size == .page_size in the buffer config
-    SetRuntimeArgs(program, reader, core, {in0_dram_buffer->address(), n_tiles});
+    SetRuntimeArgs(program, reader, core, {in0_dram_buffer->address(), in1_dram_buffer->address(), n_tiles});
     SetRuntimeArgs(program, writer, core, {dst_dram_buffer->address(), n_tiles});
 
     EnqueueProgram(cq, program, false);
@@ -122,5 +141,5 @@ void print_first_tile(const std::vector<float>& v, int elems) {
 
         printf("%.1f ", v[i]);
     }
-    printf("\n");
+    printf("\n\n");
 }
