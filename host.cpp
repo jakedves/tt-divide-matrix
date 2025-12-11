@@ -64,6 +64,8 @@ int main() {
         buffer_size, {{cb_intermediate, DataFormat::Float32}}
     ).set_page_size(cb_intermediate, buffer_size);
 
+    CreateCircularBuffer(program, core, cb_intermediate_config);
+
     // Do the same for the result data 
     std::shared_ptr<Buffer> dst_dram_buffer = CreateBuffer(dram_config);
     constexpr uint32_t cb_out = CBIndex::c_16;
@@ -84,7 +86,7 @@ int main() {
         core,
         DataMovementConfig {
             .processor = DataMovementProcessor::RISCV_1,
-            .noc = NOC::RISCV_0_default,
+            .noc = NOC::RISCV_1_default,
             .compile_args = {}
         }
     );
@@ -94,7 +96,7 @@ int main() {
         "compute.cpp",
         core,
         ComputeConfig {
-            .math_fidelity = MathFidelity::HiFi4,
+            .math_fidelity = MathFidelity::LoFi,
             .fp32_dest_acc_en = false,
             .math_approx_mode = false,
         }
@@ -125,6 +127,7 @@ int main() {
 
     CloseDevice(device);
 
+    printf("Expected values: 2.3f\n");
     print_first_tile(result_vec, elements_per_tile);
 
     return 0;

@@ -1,5 +1,4 @@
 #include <cstdint>
-#include "debug/dprint.h"
 
 void kernel_main() {
     const uint32_t addr0 = get_arg_val<uint32_t>(0);
@@ -7,7 +6,7 @@ void kernel_main() {
     const uint32_t num_tiles = get_arg_val<uint32_t>(2);
 
     constexpr uint32_t cb_in0 = 0;
-    constexpr uint32_t cb_in1 = 0;
+    constexpr uint32_t cb_in1 = 1;
     constexpr uint32_t bank_id = 0;
     const uint32_t tile_size_bytes = get_tile_size(cb_in0);
 
@@ -23,8 +22,6 @@ void kernel_main() {
 
         cb_push_back(cb_in0, 1);
 
-        DPRINT << "First CB handled by reader" << ENDL();
-
         // second input
         cb_reserve_back(cb_in1, 1);
         uint32_t cb_in1_addr = get_write_ptr(cb_in1);
@@ -33,10 +30,6 @@ void kernel_main() {
         noc_async_read_barrier();
 
         cb_push_back(cb_in1, 1);
-
-        DPRINT << "Second CB handled by reader" << ENDL();
     }
-       
-    DPRINT << "Reader kernel complete." << ENDL();
 }
 

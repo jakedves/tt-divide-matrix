@@ -6,7 +6,6 @@
 #include "compute_kernel_api/eltwise_unary/fill.h"
 #include "compute_kernel_api/eltwise_binary.h"
 #include "compute_kernel_api/eltwise_binary_sfpu.h"
-#include "debug/dprint.h"
 
 namespace NAMESPACE {
 
@@ -26,45 +25,32 @@ void MAIN {
     init_sfpu(cb_out, cb_out);
 
     for (uint32_t i = 0; i < n_tiles; i++) {
-        DPRINT_MATH(DPRINT << "Entering compute loop." << ENDL());
         tile_regs_acquire();
 
         // dst[0] = 1.0f
         fill_tile_init();
         fill_tile(idst0, 1.0f);
 
-        DPRINT_MATH(DPRINT << "dst[0] filled with 1s" << ENDL());
-
         // overwrite the above fill_tile
         const uint32_t tile_index = 0;
         copy_tile_init(cb_in0);
-
-        DPRINT_MATH(DPRINT << "Will copy cb0 into dst[1], awaiting cb0" << ENDL());
 
         // dst[1] = cb0
         cb_wait_front(cb_in0, 1);
         copy_tile(cb_in0, tile_index, idst1);
 
-        DPRINT_MATH(DPRINT << "Copied cb0 into dst[1]" << ENDL());
-
         // dst[0] = dst[0] / dst[1]
         div_binary_tile_init();
         div_binary_tile(idst0, idst1);
 
-        DPRINT_MATH(DPRINT << "Division complete" << ENDL());
-
         tile_regs_commit();
         tile_regs_wait();
-
-        DPRINT_MATH(DPRINT << "Reserving space in cb_intermediate..." << ENDL());
 
         cb_reserve_back(cb_intermediate, 1);
         pack_reconfig_data_format(cb_intermediate);
 
         // cbi = dst[0]
         pack_tile(idst0, cb_intermediate);
-
-        DPRINT_MATH(DPRINT << "Copied dst[0] into cb_intermediate" << ENDL());
 
         tile_regs_release();
 
@@ -73,16 +59,12 @@ void MAIN {
         cb_pop_front(cb_in0, 1);
 
         // now do the matrix unit step
-        DPRINT_MATH(DPRINT << "Waiting for CB1..." << ENDL());
         cb_wait_front(cb_in1, 1);
-
-        DPRINT_MATH(DPRINT << "Waiting for CB intermediate..." << ENDL());
         cb_wait_front(cb_intermediate, 1);
 
         tile_regs_acquire();
 
         // dst[2] = cb1 * cbi
-        DPRINT_MATH(DPRINT << "Executing: dst[1] = cb1 * cbi" << ENDL());
         mul_tiles_init(cb_in1, cb_intermediate);
         mul_tiles(cb_in1, cb_intermediate, 0, 0, idst2);
 
@@ -93,13 +75,11 @@ void MAIN {
         cb_pop_front(cb_intermediate, 1);
 
         // wait for space in cb_out
-        DPRINT_MATH(DPRINT << "Waiting for space in cb_out..." << ENDL());
         cb_reserve_back(cb_out, 1);
 
         tile_regs_wait();
 
         // cb_out = dst[2]
-        DPRINT_MATH(DPRINT << "cb_out = dst[2]" << ENDL());
         pack_reconfig_data_format(cb_out);
         pack_tile(idst2, cb_out);
         
@@ -107,10 +87,7 @@ void MAIN {
 
         // cb_out has data!
         cb_push_back(cb_out, 1);
-        DPRINT_MATH(DPRINT << "CB out marked to have data!" << ENDL());
     }
-        
-    DPRINT_MATH(DPRINT << "Compute kernel complete." << ENDL());
 }
 
 } // namespace NAMESPACE
