@@ -1,12 +1,10 @@
-#include <cmath>
 #include <tt-metalium/host_api.hpp>
 #include <tt-metalium/device.hpp>
 
+#include "../utils-tt/tt-utils.h"
+
 using namespace tt;
 using namespace tt::tt_metal;
-
-
-void print_first_tile(const std::vector<float>& v, int elems);
 
 
 int main() {
@@ -27,7 +25,7 @@ int main() {
     std::vector<float> result_vec(elements_per_tile, 5.0f);
 
     printf("\nAllocated initial vector:\n");
-    print_first_tile(result_vec, elements_per_tile);
+    print_first_tile(result_vec);
 
     constexpr uint32_t buffer_size = tile_size_bytes * n_tiles;
 
@@ -128,21 +126,8 @@ int main() {
     CloseDevice(device);
 
     printf("Expected values: 2.3f\n");
-    print_first_tile(result_vec, elements_per_tile);
+    print_first_tile(result_vec);
 
     return 0;
 }
 
-void print_first_tile(const std::vector<float>& v, int elems) {
-    for (int i = 0; i < elems; i++) {
-        // print every other element for readability
-        if (i % 2 == 1) { continue; }
-
-        if (i % 32 == 0) {
-            printf("\n");
-        }
-
-        printf("%.1f ", v[i]);
-    }
-    printf("\n\n");
-}
